@@ -7,6 +7,8 @@ import sys
 def nothing(x):
     pass
 
+# Carga las imagenes
+
 
 def loadImages(url):
     notes_img = []
@@ -46,15 +48,22 @@ def loadImages(url):
     return img, img_gray, notes_img
 
 
-def eraseX2(list_template):
+# Elimina los match similares
+def eraseX2(list_template, list_keySol, w_keySol, isKey=False):
     if len(list_template) == 0:
         return []
+    if np.size(list_keySol, 0) > 1:
+        xsol = list_keySol[1][0]
+        xsol2 = list_keySol[0][0]
+    else:
+        xsol = list_keySol[0][0]
+        xsol2 = list_keySol[0][0]
     delete = []
     for i in range(np.size(list_template, 0)):
         for n in range(i + 1, np.size(list_template, 0)):
             a = abs(list_template[i][0] - list_template[n][0])
             b = abs(list_template[i][1] - list_template[n][1])
-            if (a < 3) and (b < 3):
+            if (a < 3) and (b < 3) or (list_template[n][0] <= xsol + w_keySol and not isKey or list_template[n][0] <= (xsol2 - xsol) + (w_keySol*2) and not isKey):
                 delete.append(n)
     delete = np.unique(delete)
     if np.size(delete):
@@ -64,13 +73,15 @@ def eraseX2(list_template):
     return res
 
 
+# Re pinta los match que quedaron del eraseX2
 def rePaint(img, list_template, note, color):
     w, h = note.shape[::-1]
     for i in range(len(list_template)):
-        x, y = list_template[i]
+        x, y, z = list_template[i]
         cv2.rectangle(img, (x, y), (x+w, y+h), color, 1)
 
 
+# Obtiene el valor de la nota según la clave
 def getLinesScore(img, list_keySol, list_template, keySol):
     w, h = keySol.shape[::-1]
     print(w, h)
@@ -81,53 +92,92 @@ def getLinesScore(img, list_keySol, list_template, keySol):
     fifthLine = [fourthLine[0] + 8, fourthLine[1] + 8]
 
     for i in range(len(list_template)):
-        x, y = list_template[i]
+        x, y, z = list_template[i]
         for j in range(len(list_keySol)):
-            xsol, ysol = list_keySol[j]
-            if x == 327 and y == 307:
-                if y >= fifthLine[0] + ysol + 4 and y <= fifthLine[0] + ysol + 8:
-                    print(fifthLine[0] + ysol)
+            xsol, ysol, zsol = list_keySol[j]
 
             if y <= ysol + h:
-                # FA
-                if y >= fourthLine[0] + ysol + 1 and y <= fifthLine[0] + ysol - 4:
-                    cv2.putText(img, 'Fa', (x, y-fourthLine[1]), cv2.FONT_HERSHEY_SIMPLEX,
-                                0.5, (124, 124, 0), 1, cv2.LINE_AA)
-                # Mi
-                elif (y >= fourthLine[0] + ysol + 4 and y <= fifthLine[0] + ysol) or (y >= firstLine[0] + ysol + 1 and y <= secondLine[0] + ysol - 4):
-                    cv2.putText(img, 'Mi', (x, y-fourthLine[1]), cv2.FONT_HERSHEY_SIMPLEX,
-                                0.5, (255, 124, 0), 1, cv2.LINE_AA)
-                # Sol
-                elif y >= thirdLine[0] + ysol + 4 and y <= fourthLine[0] + ysol:
-                    cv2.putText(img, 'Sol', (x, y-fourthLine[1]), cv2.FONT_HERSHEY_SIMPLEX,
-                                0.5, (0, 124, 0), 1, cv2.LINE_AA)
-                # La
-                if y >= thirdLine[0] + ysol + 1 and y <= fourthLine[0] + ysol - 4:
-                    cv2.putText(img, 'La', (x, y-fourthLine[1]), cv2.FONT_HERSHEY_SIMPLEX,
-                                0.5, (124, 0, 0), 1, cv2.LINE_AA)
-                # Si
-                elif y >= secondLine[0] + ysol + 4 and y <= thirdLine[0] + ysol:
-                    cv2.putText(img, 'Si', (x, y-fourthLine[1]), cv2.FONT_HERSHEY_SIMPLEX,
-                                0.5, (0, 255, 0), 1, cv2.LINE_AA)
-                # Do
-                elif (y >= secondLine[0] + ysol + 1 and y <= thirdLine[0] + ysol - 4) or (y >= fifthLine[0] + ysol + 4 and y <= fifthLine[0] + ysol + 8):
-                    cv2.putText(img, 'Do', (x, y-fourthLine[1]), cv2.FONT_HERSHEY_SIMPLEX,
-                                0.5, (255, 0, 0), 1, cv2.LINE_AA)
-                # Re
-                elif (y >= firstLine[0] + ysol + 4 and y <= secondLine[0] + ysol) or (y >= fifthLine[0] + ysol + 1 and y <= h + ysol - 4):
+                # Re: 2-3
+                if (y >= firstLine[0] + ysol + 4 and y <= secondLine[0] + ysol) or (y >= fifthLine[0] + ysol + 1 and y <= h + ysol - 12):
                     cv2.putText(img, 'Re', (x, y-fourthLine[1]), cv2.FONT_HERSHEY_SIMPLEX,
                                 0.5, (0, 0, 255), 1, cv2.LINE_AA)
+                    if y <= secondLine[0] + ysol:
+                        list_template[i][2] = 3
+                    else:
+                        list_template[i] = 2
+                # Do: 0-1
+                elif (y >= secondLine[0] + ysol and y <= thirdLine[0] + ysol - 4) or (y >= fifthLine[0] + ysol + 4 and y <= fifthLine[0] + ysol + 8):
+                    cv2.putText(img, 'Do', (x, y-fourthLine[1]), cv2.FONT_HERSHEY_SIMPLEX,
+                                0.5, (255, 0, 0), 1, cv2.LINE_AA)
+                    if y <= thirdLine[1] + ysol - 4:
+                        list_template[i][2] = 1
+                    else:
+                        list_template[i][2] = 0
+                # Si 12
+                elif y >= secondLine[0] + ysol + 4 and y <= thirdLine[0] + ysol - 2:
+                    cv2.putText(img, 'Si', (x, y-fourthLine[1]), cv2.FONT_HERSHEY_SIMPLEX,
+                                0.5, (0, 255, 0), 1, cv2.LINE_AA)
+                    list_template[i][2] = 12
+                # La 10-11
+                if (y >= thirdLine[0] + ysol and y <= fourthLine[0] + ysol - 4) or (y >= firstLine[0] + ysol - 11 and y <= firstLine[0] + ysol - 8):
+                    cv2.putText(img, 'La', (x, y-fourthLine[1]), cv2.FONT_HERSHEY_SIMPLEX,
+                                0.5, (124, 0, 0), 1, cv2.LINE_AA)
+                    if y <= firstLine[0] + ysol - 8:
+                        list_template[i][2] = 11
+                    else:
+                        list_template[i][2] = 10
+                # Sol 8-9
+                elif (y >= thirdLine[0] + ysol + 4 and y <= fourthLine[0] + ysol) or (y >= firstLine[0] + ysol - 8 and y <= firstLine[0] + ysol - 5):
+                    cv2.putText(img, 'Sol', (x, y-fourthLine[1]), cv2.FONT_HERSHEY_SIMPLEX,
+                                0.5, (0, 124, 0), 1, cv2.LINE_AA)
+                    if y <= firstLine[0] + ysol - 5:
+                        list_template[i][2] = 9
+                    else:
+                        list_template[i][2] = 8
+                # Fa 6-7
+                elif (y >= fourthLine[0] + ysol + 1 and y <= fifthLine[0] + ysol - 4) or (y >= firstLine[0] + ysol - 4 and y <= firstLine[0] + ysol - 2):
+                    cv2.putText(img, 'Fa', (x, y-fourthLine[1]), cv2.FONT_HERSHEY_SIMPLEX,
+                                0.5, (124, 124, 0), 1, cv2.LINE_AA)
+                    if y <= firstLine[0] + ysol - 2:
+                        list_template[i][2] = 7
+                    else:
+                        list_template[i][2] = 6
+                # Mi: 4-5
+                elif (y >= fourthLine[0] + ysol + 5 and y <= fifthLine[0] + ysol - 2) or (y >= firstLine[0] + ysol and y <= secondLine[0] + ysol - 5):
+                    cv2.putText(img, 'Mi', (x, y-fourthLine[1]), cv2.FONT_HERSHEY_SIMPLEX,
+                                0.5, (255, 124, 0), 1, cv2.LINE_AA)
+                    if secondLine[0] + ysol - 5:
+                        list_template[i][2] = 5
+                    else:
+                        list_template[i][2] = 4
 
 
+def sortNotes(list_keySol, list_template, keySol):
+    w, h = keySol.shape[::-1]
+    sort_notes = []
+    for i in range(len(list_keySol)):
+        xsol, ysol, zsol = list_keySol[i]
+        aux = []
+        for j in range(len(list_template)):
+            x, y, z = list_template[j]
+            if y <= h + ysol and y >= ysol:
+                aux.append([x, y, z])
+        aux.sort(key=lambda x: x[0])
+        sort_notes.append(aux)
+    print(sort_notes)
+
+
+# Encuentra todos los match
 def getNotes(img, img_gray, note, color, list_save, thr=0.69):
     w, h = note.shape[::-1]
     result = cv2.matchTemplate(img_gray, note, cv2.TM_CCOEFF_NORMED)
     loc = np.where(result >= thr)
     for point in zip(*loc[::-1]):
         # cv2.rectangle(img, point, (point[0] + w, point[1] + h), color, 1)
-        list_save.append([point[0], point[1]])
+        list_save.append([point[0], point[1], -1])
 
 
+# Redefine el tamaño de la imagen
 def resizeFromKey(img, img_gray):
     proob_img = copy.deepcopy(img)
     proob_img_gray = copy.deepcopy(img_gray)
@@ -146,10 +196,12 @@ if __name__ == "__main__":
     sheet_name = './resource/grupo4/Escaneado/' + sys.argv[1]
     smImg, smImg_gray, notes = loadImages(sheet_name)
     cv2.namedWindow("Trackbars")
-    cv2.createTrackbar("scale_width", "Trackbars", 38, 100, nothing)
-    cv2.createTrackbar("scale_height", "Trackbars", 40, 100, nothing)
+    cv2.createTrackbar("scale_width", "Trackbars", 38, 200, nothing)
+    cv2.createTrackbar("scale_height", "Trackbars", 40, 200, nothing)
     cv2.createTrackbar("threshold", "Trackbars", 43, 100, nothing)
     cv2.imshow('Corcheas', notes[12])
+
+    array_notas = []
 
     list_blackNotes = []
     list_blackNotesScore = []
@@ -183,12 +235,21 @@ if __name__ == "__main__":
                     getNotes(proob_img, proob_img_gray,
                              notes[n], (255, 255, 0), list_corcheaNotes, 0.55)
             if len(list_blackNotes) != 0:
-                final_keySol = eraseX2(list_keySol)
-                final_blackNotes = eraseX2(list_blackNotes)
+                final_keySol = eraseX2(
+                    list_keySol, list_keySol, notes[12].shape[1], True)
+                final_blackNotes = eraseX2(
+                    list_blackNotes, final_keySol, notes[12].shape[1])
+                final_whiteNotes = eraseX2(
+                    list_whiteNotes, final_keySol, notes[12].shape[1])
+                rePaint(proob_img, final_whiteNotes, notes[13], (0, 0, 255))
                 rePaint(proob_img, final_blackNotes, notes[0], (255, 0, 0))
                 rePaint(proob_img, final_keySol, notes[12], (0, 255, 0))
                 getLinesScore(proob_img, final_keySol,
                               final_blackNotes, notes[12])
+                getLinesScore(proob_img, final_keySol,
+                              final_whiteNotes, notes[12])
+                sortNotes(final_keySol, final_blackNotes, notes[12])
+                sortNotes(final_keySol, final_whiteNotes, notes[12])
             cv2.imshow('Calc size', proob_img)
 
             i += 1
@@ -203,7 +264,8 @@ if __name__ == "__main__":
             proob_img, proob_img_gray, thr = resizeFromKey(smImg, smImg_gray)
             getNotes(proob_img, proob_img_gray,
                      notes[12], (0, 255, 0), list_keySol, thr)
-            final_keySol = eraseX2(list_keySol)
+            final_keySol = eraseX2(
+                list_keySol, list_keySol, notes[12].shape[1], True)
             if type(final_keySol) is not list:
                 rePaint(proob_img, final_keySol, notes[12], (0, 255, 0))
             cv2.imshow('Calc size', proob_img)
@@ -239,12 +301,21 @@ if __name__ == "__main__":
                     getNotes(proob_img, proob_img_gray,
                              notes[n], (255, 255, 0), list_corcheaNotes, 0.55)
             if len(list_blackNotes) != 0:
-                final_keySol = eraseX2(list_keySol)
-                final_blackNotes = eraseX2(list_blackNotes)
+                final_keySol = eraseX2(
+                    list_keySol, list_keySol, notes[12].shape[1], True)
+                final_blackNotes = eraseX2(
+                    list_blackNotes, final_keySol, notes[12].shape[1])
+                final_whiteNotes = eraseX2(
+                    list_whiteNotes, final_keySol, notes[12].shape[1])
+                rePaint(proob_img, final_whiteNotes, notes[13], (0, 0, 255))
                 rePaint(proob_img, final_blackNotes, notes[0], (255, 0, 0))
                 rePaint(proob_img, final_keySol, notes[12], (0, 255, 0))
                 getLinesScore(proob_img, final_keySol,
                               final_blackNotes, notes[12])
+                getLinesScore(proob_img, final_keySol,
+                              final_whiteNotes, notes[12])
+                sortNotes(final_keySol, final_blackNotes, notes[12])
+                sortNotes(final_keySol, final_whiteNotes, notes[12])
             cv2.imshow('Calc size', proob_img)
 
         if cv2.waitKey(0) & 0xFF == ord('q'):
