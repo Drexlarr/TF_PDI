@@ -423,10 +423,6 @@ if __name__ == "__main__":
                 getLinesScore(proob_img, final_keySol,
                               final_semibreves, notes[12])
 
-                sortNotes(final_keySol, final_blackNotes, notes[12])
-                sortNotes(final_keySol, final_whiteNotes, notes[12])
-                sortNotes(final_keySol, final_semibreves, notes[12])
             cv2.imshow('Calc size', proob_img)
-
         if cv2.waitKey(0) & 0xFF == ord('q'):
             break
