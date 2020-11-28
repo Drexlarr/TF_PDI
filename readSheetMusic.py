@@ -85,15 +85,6 @@ def eraseX2(list_template, list_keySol, w_keySol, isKey=False):
     return res
 
 
-def detectCorchea(list_template, list_cn, note, note_cn):
-    w_cn, h_cn = note_cn.shape[::-1]
-    w, h = note.shape[::-1]
-    for i in range(np.size(list_cn, 0)):
-        for n in range(np.size(list_template, 0)):
-            if list_cn[i][0] <= list_template[n][0] + w and list_template[i][1] - 5 < list_cn[i][1] + h_cn:
-                list_template[n][3] = 0.5
-
-
 # Re pinta los match que quedaron del eraseX2
 def rePaint(img, list_template, note, color):
     w, h = note.shape[::-1]
@@ -191,11 +182,17 @@ def sortNotes(list_keySol, list_template, keySol):
 
 def group(blacks, whites, breves, list_keySol, keySol, list_cn, notes):
     w_bnote, h_bnote = notes[0].shape[::-1]
+    w_wnote, h_wnote = notes[14].shape[::-1]
     w_cn, h_cn = notes[8].shape[::-1]
     w, h = keySol.shape[::-1]
     sort_notes = []
+    aux_x = aux_y = 0
     for i in range(len(list_keySol)):
         xsol, ysol, zsol = list_keySol[i]
+        if abs(xsol - aux_x) < 3 and abs(ysol - aux_y) < 3:
+            continue
+        aux_x = xsol
+        aux_y = ysol
         aux = []
         for j in range(len(blacks)):
             x, y, z = blacks[j]
@@ -211,14 +208,19 @@ def group(blacks, whites, breves, list_keySol, keySol, list_cn, notes):
             if y <= h + ysol and y >= ysol:
                 if z != -1:
                     aux.append([x, y, z, 2])
+                    for q in range(len(list_cn)):
+                        if (x + w_wnote > list_cn[q][0] and x < list_cn[q][0]) and y - 5 < list_cn[q][1] + h_cn:
+                            aux[len(aux)-1][3] = 0.5
         for l in range(len(breves)):
             x, y, z = breves[l]
             if y <= h + ysol and y >= ysol:
                 if z != -1:
                     aux.append([x, y, z, 4])
+
         aux.sort(key=lambda x: x[0])
         if len(aux) != 0:
             sort_notes += aux
+    print(sort_notes)
     return sort_notes
 
 
@@ -249,6 +251,7 @@ def resizeFromKey(img, img_gray):
 
 if __name__ == "__main__":
     sheet_name = './resource/grupo4/Escaneado/' + sys.argv[1]
+    # sheet_name = sys.argv[1]
     smImg, smImg_gray, notes = loadImages(sheet_name)
     cv2.namedWindow("Trackbars")
     cv2.createTrackbar("scale_width", "Trackbars", 38, 225, nothing)

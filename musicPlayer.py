@@ -9,6 +9,7 @@ array_keySol_notes = ['C4', 'C5', 'D4', 'D5', 'E4',
 
 
 def readNotes(array):
+    print(len(array))
     for i in range(len(array)):
         note = array_keySol_notes[array[i][2]]
         tp_note = array[i][3]
