@@ -1,7 +1,7 @@
 import musicalbeeps
 
-tempo = 100
-player = musicalbeeps.Player(volume=0.4,
+tempo = 120
+player = musicalbeeps.Player(volume=0.2,
                              mute_output=False)
 
 array_keySol_notes = ['C4', 'C5', 'D4', 'D5', 'E4',
